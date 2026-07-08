@@ -1,5 +1,7 @@
 # ci-churn
 
+> **GitHub Actions cost analyzer & flaky-test detector for pull requests**
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![Part of Gaia](https://img.shields.io/badge/part%20of-Gaia%20skill--tree-6b46c1)](https://gaiaskilltree.com)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-3776ab.svg)](https://www.python.org)
@@ -11,21 +13,34 @@
 
 You ship a 3-line fix, then spend the next 20 minutes watching red X's turn green one push at a time. `ci-churn` reads your PR's commit history and GitHub Actions run durations and tells you exactly where that time went — and which local pre-push check would have saved it.
 
-```bash
-bash <(curl -sL https://raw.githubusercontent.com/gaia-research/skill-ci-churn/main/install.sh)
-```
-
 No pip. No npm. No config file. One Python script, `gh` CLI, done.
 
 ---
 
-## Quick Start (30 seconds)
+## Quick Start
 
+### 1. Install and Use as a Skill (Recommended)
+
+`ci-churn` is designed to be installed as an AI agent skill for assistants like Claude Code, Codex, or pi. 
+
+Run the installer to locate your agent's skills folder and install `ci-churn` automatically:
 ```bash
-# 1. Install (or run the script standalone)
+bash <(curl -sL https://raw.githubusercontent.com/gaia-research/skill-ci-churn/main/install.sh)
+```
+
+Once installed, invoke it directly within your agent conversation:
+```
+/ci-churn <pr-number>
+```
+
+### 2. Standalone Python Usage (Secondary)
+
+If you are running manually without an agent, download and run the script directly:
+```bash
+# Download the script
 curl -sL https://raw.githubusercontent.com/gaia-research/skill-ci-churn/main/ci_churn.py -o ci_churn.py
 
-# 2. Point it at any PR you have read access to
+# Run on any PR
 python3 ci_churn.py <pr-number>
 ```
 
