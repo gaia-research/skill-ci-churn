@@ -19,6 +19,33 @@ No pip. No npm. No config file. One Python script, `gh` CLI, done.
 
 ---
 
+## Quick Start (30 seconds)
+
+```bash
+# 1. Install (or run the script standalone)
+curl -sL https://raw.githubusercontent.com/gaia-research/skill-ci-churn/main/ci_churn.py -o ci_churn.py
+
+# 2. Point it at any PR you have read access to
+python3 ci_churn.py <pr-number>
+```
+
+**Before → After**
+
+| Before `ci-churn` | After `ci-churn` |
+|---|---|
+| "The pipeline was flaky" — a story | 22m 49s of wasted GitHub Actions time — a number |
+| Retries burn minutes with no attribution | Per-PR churn ratio + minute-count |
+| Same lint error caught in CI every PR | Suggested pre-push checks generated from your run history |
+
+### Troubleshooting the first run
+
+- **`gh: command not found`** — install the [GitHub CLI](https://cli.github.com) and run `gh auth login`.
+- **`Authentication required`** on private repos — `gh` needs `repo:read` scope. Run `gh auth refresh -s repo` to add it.
+- **`PR not found`** — the PR number is repo-scoped. Pass `--owner myorg --repo myrepo` explicitly if your working directory doesn't match the PR's repo.
+- **Python version** — needs Python 3.8+. Check with `python3 --version`.
+
+---
+
 ## Why it exists
 
 **GitHub Actions time waste** — the rebuild time burned on avoidable retry-pushes like lint fixes, import errors, and flaky test retries — is the metric almost no team tracks. Every codebase has commits that exist only because a 30-second local check wasn't run first. At 22+ minutes per PR across a team of ten, that's a GitHub Actions cost conversation worth having. `ci-churn` is a CI cost analyzer: it reads your PR commits and GitHub Actions run durations, identifies the unnecessary pushes, and generates the pre-push checks that would have prevented them.
@@ -247,6 +274,10 @@ Ship the fix. Measure the drift. Close the loop.
 | [Trunk Flaky Tests](https://trunk.io/flaky-tests) | Test-quarantine + rerun policy | SaaS, per-repo config | No |
 | Bare `gh run list --json` | Raw run metadata | Zero setup | You write the analyzer |
 | GitHub Actions `workflow-run-summary` | Run history only | Zero setup | No — post-run read-only, no pre-push suggestions |
+| [GitLab Insights](https://docs.gitlab.com/ee/user/analytics/) | GitLab pipeline analytics dashboard | GitLab-native, per-project config | No — GitLab-specific |
+| [CircleCI Insights](https://circleci.com/docs/insights/) | Cross-workflow test-flakiness dashboard | CircleCI SaaS | No — CircleCI-specific |
+| [Datadog CI Visibility](https://www.datadoghq.com/product/ci-cd-monitoring/) | Cross-CI observability + flake detection | SaaS, agent install per runner | No |
+| [`act`](https://github.com/nektos/act) | Local GitHub Actions runner | Docker + config | No — reproduces CI, doesn't measure churn |
 
 Different jobs. `ci-churn` optimizes for the "I want a number for *this* PR, right now, from my terminal, no signup" case — especially when an agent is asking.
 
