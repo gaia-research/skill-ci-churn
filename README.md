@@ -5,9 +5,9 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-3776ab.svg)](https://www.python.org)
 [![Zero deps](https://img.shields.io/badge/deps-stdlib%20only-success)](#requirements)
 
-> Golly, boss — your green build is a magician; `ci-churn` shows the sleeves.
+**How much GitHub Actions rebuild time did your last PR waste on avoidable lint and test failures?**
 
-**How much CI-compute did your last PR actually burn on avoidable "fix the CI" pushes?**
+> Golly, boss — your green build is a magician; `ci-churn` shows the sleeves.
 
 You ship a 3-line fix, then spend the next 20 minutes watching red X's turn green one push at a time. `ci-churn` reads your PR's commit history and GitHub Actions run durations and tells you exactly where that time went — and which local pre-push check would have saved it.
 
@@ -21,7 +21,7 @@ No pip. No npm. No config file. One Python script, `gh` CLI, done.
 
 ## Why it exists
 
-**CI churn detection** — measuring the CI compute burned on avoidable retry-pushes — is the metric almost no team tracks. Every codebase has commits that only exist because a lint, an import, or a flaky test caught something a 30-second local check would have caught first. `ci-churn` turns that invisible tax into a number you can quote in a retro.
+**GitHub Actions time waste** — the rebuild time burned on avoidable retry-pushes like lint fixes, import errors, and flaky test retries — is the metric almost no team tracks. Every codebase has commits that exist only because a 30-second local check wasn't run first. At 22+ minutes per PR across a team of ten, that's a GitHub Actions cost conversation worth having. `ci-churn` is a CI cost analyzer: it reads your PR commits and GitHub Actions run durations, identifies the unnecessary pushes, and generates the pre-push checks that would have prevented them.
 
 Built as a first-class agent skill: any agent that reads `SKILL.md` (Claude Code, Codex, Cursor, Gemini CLI, pi) can call `/ci-churn <PR>` and get the same report a human would.
 
@@ -246,6 +246,7 @@ Ship the fix. Measure the drift. Close the loop.
 | [BuildPulse](https://buildpulse.io) | Cross-repo flaky-test detection | SaaS, webhook install | No |
 | [Trunk Flaky Tests](https://trunk.io/flaky-tests) | Test-quarantine + rerun policy | SaaS, per-repo config | No |
 | Bare `gh run list --json` | Raw run metadata | Zero setup | You write the analyzer |
+| GitHub Actions `workflow-run-summary` | Run history only | Zero setup | No — post-run read-only, no pre-push suggestions |
 
 Different jobs. `ci-churn` optimizes for the "I want a number for *this* PR, right now, from my terminal, no signup" case — especially when an agent is asking.
 
@@ -253,14 +254,20 @@ Different jobs. `ci-churn` optimizes for the "I want a number for *this* PR, rig
 
 ## FAQ
 
-**How do I detect flaky tests in GitHub Actions without a SaaS?**
-Run `ci-churn` on the PR. Commits labeled `ci-fix` where the same test failed then passed on rerun are your flake candidates. The `--json` flag gives you the raw data if you want to build your own dashboard.
+**How do I detect flaky tests in GitHub Actions?**
+Run `ci-churn` on any PR number. Commits labeled `ci-fix` where the same test failed then passed on rerun are your flake candidates. The `--json` flag gives you raw data to build your own dashboard or feed into a Slack bot.
 
 **Does `ci-churn` work on private repos?**
 Yes, as long as your `gh` CLI is authenticated with `repo:read` scope. `gh auth status` is the smoke test.
 
-**Can an AI agent call this automatically at PR close?**
-Yes — that's the primary shape. Install as a skill (`.agents/skills/ci-churn/` or `.claude/skills/ci-churn/`), and any agent that reads `SKILL.md` can invoke `/ci-churn <PR>`. Wire it into `/fp-drift` to auto-close every feature pipeline with a churn report.
+**How do I automate ci-churn on pull requests?**
+Install as a skill (`.agents/skills/ci-churn/` or `.claude/skills/ci-churn/`), and any agent that reads `SKILL.md` can invoke `/ci-churn <PR>` automatically. Wire it into a post-merge hook or agent pipeline to close every feature PR with a churn report — no manual runs needed.
+
+**Why are my GitHub Actions tests failing intermittently?**
+Intermittent failures are usually flaky tests — tests that fail then pass without any code change, caused by race conditions, timing dependencies, or environment-specific state. Run `ci-churn` on a recent PR: commits labeled `ci-fix` that followed a test failure with no code change between runs are your flake candidates.
+
+**How do I detect intermittent test failures in my CI pipeline?**
+Run `python3 ci_churn.py <pr-number> --json` and look for `ci-fix` commits. A test that failed then passed with no code change between runs is a flaky test. `ci-churn` surfaces these patterns directly from your GitHub Actions run history — no SaaS signup, no webhook, no config file.
 
 **What counts as a "ci-fix" commit?**
 Subject-line pattern match, first-match-wins. See the [commit-classification table](#how-commits-are-classified) — deterministic, no LLM classifier in the hot path.
@@ -269,7 +276,7 @@ Subject-line pattern match, first-match-wins. See the [commit-classification tab
 
 ## See also
 
-- [`gaia-research/skill-fuse`](https://github.com/gaia-research/skill-fuse) — companion skill for fusing two `SKILL.md` files into one.
+- [merge overlapping agent commands](https://github.com/gaia-research/skill-fuse) — companion skill `skill-fuse` for combining Claude Code / Cursor / Windsurf commands into one.
 - [`gaia-research/marketing-tasks`](https://github.com/gaia-research/marketing-tasks) — campaigns and deliverables using this skill.
 - [Gaia Skill Registry](https://gaiaskilltree.com) — the open catalog this skill belongs to.
 
