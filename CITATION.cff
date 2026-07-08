@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use ci-churn in a paper, retro, or engineering-metrics blog post, cite it as follows."
+title: "ci-churn: CI churn detection for pull requests"
+abstract: >-
+  ci-churn reads a pull request's commits and GitHub Actions run durations,
+  classifies commits as feature, review-fix, or ci-fix, and reports the
+  CI-compute burned on avoidable retry pushes. Ships as an agent skill
+  (SKILL.md) compatible with Claude Code, Codex, Cursor, Gemini CLI, and pi.
+type: software
+license: MIT
+repository-code: "https://github.com/gaia-research/skill-ci-churn"
+url: "https://github.com/gaia-research/skill-ci-churn#readme"
+keywords:
+  - ci-churn
+  - flaky-tests
+  - github-actions
+  - pipeline-analytics
+  - agent-skill
+  - claude-code
+  - anthropic
+  - developer-tools
+authors:
+  - name: "Gaia Research"
+    website: "https://gaiaskilltree.com"

@@ -1,5 +1,12 @@
 # ci-churn
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Part of Gaia](https://img.shields.io/badge/part%20of-Gaia%20skill--tree-6b46c1)](https://gaiaskilltree.com)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-3776ab.svg)](https://www.python.org)
+[![Zero deps](https://img.shields.io/badge/deps-stdlib%20only-success)](#requirements)
+
+> Golly, boss — your green build is a magician; `ci-churn` shows the sleeves.
+
 **How much CI-compute did your last PR actually burn on avoidable "fix the CI" pushes?**
 
 You ship a 3-line fix, then spend the next 20 minutes watching red X's turn green one push at a time. `ci-churn` reads your PR's commit history and GitHub Actions run durations and tells you exactly where that time went — and which local pre-push check would have saved it.
@@ -9,6 +16,14 @@ bash <(curl -sL https://raw.githubusercontent.com/gaia-research/skill-ci-churn/m
 ```
 
 No pip. No npm. No config file. One Python script, `gh` CLI, done.
+
+---
+
+## Why it exists
+
+**CI churn detection** — measuring the CI compute burned on avoidable retry-pushes — is the metric almost no team tracks. Every codebase has commits that only exist because a lint, an import, or a flaky test caught something a 30-second local check would have caught first. `ci-churn` turns that invisible tax into a number you can quote in a retro.
+
+Built as a first-class agent skill: any agent that reads `SKILL.md` (Claude Code, Codex, Cursor, Gemini CLI, pi) can call `/ci-churn <PR>` and get the same report a human would.
 
 ---
 
@@ -68,6 +83,16 @@ The single number that matters:
 | **>50%** | High churn — your local dev loop isn't catching what CI catches |
 
 Anything above 20% is a lever. `ci-churn` tells you which lever to pull.
+
+---
+
+## Use cases
+
+- **Flaky test analytics** — classify failing runs as flake vs. real regression before filing a ticket.
+- **PR CI cost** — quote a real minute-count when a colleague asks "was that PR expensive?"
+- **Pre-push checks** — get a suggested local-check list derived from what your CI actually caught.
+- **Agentic CI triage** — wire `/ci-churn` into an agent's post-PR retro to close the feedback loop automatically.
+- **Pipeline health AI** — feed `--json` output into dashboards, Slack bots, or LLM judges.
 
 ---
 
@@ -210,6 +235,43 @@ You don't need Gaia to use this. The script is fully standalone.
 Because "the pipeline was flaky" and "I had to fix some CI stuff" are stories, not numbers. When the number is 22 minutes per PR across a team of ten, that's an engineering-hours conversation worth having.
 
 Ship the fix. Measure the drift. Close the loop.
+
+---
+
+## How it compares
+
+| Tool | Focus | Setup | Agent-native |
+|---|---|---|---|
+| **`ci-churn`** | Per-PR retry-cost + pre-push suggestions | One file, `gh` CLI, no config | Yes — invoked as `/ci-churn` |
+| [BuildPulse](https://buildpulse.io) | Cross-repo flaky-test detection | SaaS, webhook install | No |
+| [Trunk Flaky Tests](https://trunk.io/flaky-tests) | Test-quarantine + rerun policy | SaaS, per-repo config | No |
+| Bare `gh run list --json` | Raw run metadata | Zero setup | You write the analyzer |
+
+Different jobs. `ci-churn` optimizes for the "I want a number for *this* PR, right now, from my terminal, no signup" case — especially when an agent is asking.
+
+---
+
+## FAQ
+
+**How do I detect flaky tests in GitHub Actions without a SaaS?**
+Run `ci-churn` on the PR. Commits labeled `ci-fix` where the same test failed then passed on rerun are your flake candidates. The `--json` flag gives you the raw data if you want to build your own dashboard.
+
+**Does `ci-churn` work on private repos?**
+Yes, as long as your `gh` CLI is authenticated with `repo:read` scope. `gh auth status` is the smoke test.
+
+**Can an AI agent call this automatically at PR close?**
+Yes — that's the primary shape. Install as a skill (`.agents/skills/ci-churn/` or `.claude/skills/ci-churn/`), and any agent that reads `SKILL.md` can invoke `/ci-churn <PR>`. Wire it into `/fp-drift` to auto-close every feature pipeline with a churn report.
+
+**What counts as a "ci-fix" commit?**
+Subject-line pattern match, first-match-wins. See the [commit-classification table](#how-commits-are-classified) — deterministic, no LLM classifier in the hot path.
+
+---
+
+## See also
+
+- [`gaia-research/skill-fuse`](https://github.com/gaia-research/skill-fuse) — companion skill for fusing two `SKILL.md` files into one.
+- [`gaia-research/marketing-tasks`](https://github.com/gaia-research/marketing-tasks) — campaigns and deliverables using this skill.
+- [Gaia Skill Registry](https://gaiaskilltree.com) — the open catalog this skill belongs to.
 
 ---
 
