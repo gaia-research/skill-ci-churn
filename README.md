@@ -300,23 +300,19 @@ Different jobs. `ci-churn` optimizes for the "I want a number for *this* PR, rig
 
 ## FAQ
 
-**How do I detect flaky tests in GitHub Actions?**
-Run `ci-churn` on any PR number. Commits labeled `ci-fix` where the same test failed then passed on rerun are your flake candidates. The `--json` flag gives you raw data to build your own dashboard or feed into a Slack bot.
-
-**Does `ci-churn` work on private repos?**
-Yes, as long as your `gh` CLI is authenticated with `repo:read` scope. `gh auth status` is the smoke test.
-
-**How do I automate ci-churn on pull requests?**
-Install as a skill (`.agents/skills/ci-churn/` or `.claude/skills/ci-churn/`), and any agent that reads `SKILL.md` can invoke `/ci-churn <PR>` automatically. Wire it into a post-merge hook or agent pipeline to close every feature PR with a churn report — no manual runs needed.
-
-**Why are my GitHub Actions tests failing intermittently?**
-Intermittent failures are usually flaky tests — tests that fail then pass without any code change, caused by race conditions, timing dependencies, or environment-specific state. Run `ci-churn` on a recent PR: commits labeled `ci-fix` that followed a test failure with no code change between runs are your flake candidates.
-
-**How do I detect intermittent test failures in my CI pipeline?**
-Run `python3 ci_churn.py <pr-number> --json` and look for `ci-fix` commits. A test that failed then passed with no code change between runs is a flaky test. `ci-churn` surfaces these patterns directly from your GitHub Actions run history — no SaaS signup, no webhook, no config file.
-
-**What counts as a "ci-fix" commit?**
-Subject-line pattern match, first-match-wins. See the [commit-classification table](#how-commits-are-classified) — deterministic, no LLM classifier in the hot path.
+| Question | Answer |
+|---|---|
+| **What's a "churn ratio"?** | `(review-fix + ci-fix commits) / total commits`. Above 20% means your local dev loop isn't catching what CI catches. |
+| **How are commits classified?** | Subject-line regex, first-match-wins. `feat/add/refactor` → `feature`; `per review` → `review-fix`; `fix import`, `codeql`, `lazy-import`, `fix ruff/mypy`, etc. → `ci-fix`. See [the table above](#how-commits-are-classified). Deterministic — no LLM in the hot path. |
+| **What if my commit messages don't match those patterns?** | Unmatched → `feature` (undercounts churn). Adopt conventional commits, or edit the label regexes at the top of `ci_churn.py`. |
+| **How do I detect flaky tests in GitHub Actions with this?** | `ci-fix` commits that follow a failed run with no code change between attempts are flake candidates. Use `--json` to feed the raw data into a dashboard or Slack bot. |
+| **What does "blocked-wait estimate" mean?** | With `--session-log`, the wall-clock time your agent sat idle while a failed CI run was in progress. The min/max bracket = failed-runs-only vs. all avoidable-commit runs. |
+| **Which agents does `--session-log` support?** | `pi` (`~/.pi/sessions/`) and Claude Code (`~/.claude/projects/`). Any JSONL log with per-turn timestamps works. |
+| **Does it work on private repos?** | Yes — `gh` CLI must be authenticated with `repo:read` scope. `gh auth status` is the smoke test. |
+| **Does it need an API key or LLM?** | No. Pure Python stdlib + `gh`. No inference, no network calls beyond the GitHub API. |
+| **Can I run it in CI?** | Yes. `--json` output + exit codes: `0` ok · `1` gh missing/unauth · `2` PR not found. Wire into a post-merge hook or agent pipeline. |
+| **What about squash/rebase?** | Only commits currently on the PR branch are counted. Run before you squash if you want accurate churn. |
+| **How do I install it?** | `bash <(curl -sL https://raw.githubusercontent.com/gaia-research/skill-ci-churn/main/install.sh)` — auto-detects your skills dir. |
 
 ---
 
