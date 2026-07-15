@@ -1,5 +1,7 @@
 # ci-churn
 
+[![Gaia](https://gaiaskilltree.com/badges/_assets/gaia-research/skill-ci-churn.svg?repo=gaia-research%2Fgaia-skill-tree)](https://gaiaskilltree.com/named/#explorer/gaia-research/skill-ci-churn)
+
 > **GitHub Actions cost analyzer & flaky-test detector for pull requests**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
