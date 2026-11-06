@@ -225,7 +225,10 @@ python3 ci_churn.py <pr-number> --json
 python3 ci_churn.py <pr-number> --session-log ~/.pi/sessions/latest.jsonl
 ```
 
-Exit codes: `0` success · `1` gh missing or unauth · `2` PR not found.
+Exit codes: `0` success · `1` gh missing or unauthenticated · `2` PR not found or API error.
+Required workflow-fetch failures stop the report instead of being counted as zero
+CI usage. Force-push history remains best-effort (for example, a deleted fork or
+expired event history may be unavailable).
 
 ---
 
@@ -240,6 +243,19 @@ Once installed, invoke from any agent conversation:
 The agent reads `SKILL.md`, runs the script, and returns the churn ratio, blocked-wait estimate, and suggested pre-push checks. Works in a post-ship retro, mid-PR review, or wired into `/fp-drift` to close every feature pipeline automatically.
 
 ---
+
+## Development checks
+
+From the repository root:
+
+```bash
+python3 -m unittest discover -v
+bash -n install.sh
+```
+
+The offline tests mock `gh api` responses, including multi-page commit arrays
+and workflow-run objects. They need neither GitHub credentials nor network
+access. PR CI runs them on Python 3.8 and 3.14.
 
 ## Requirements
 

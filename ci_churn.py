@@ -106,15 +106,19 @@ def classify_commit(message: str, replaced: bool = False) -> str:
 # GitHub API helpers
 # ---------------------------------------------------------------------------
 
-def _gh(*args: str) -> dict | list:
+def _gh(*args: str, list_key: Optional[str] = None) -> dict | list:
     """Run `gh api <args>` and return parsed JSON, or raise on error.
+
+    Slurp pages into one JSON array before decoding. Array endpoints are
+    flattened; object endpoints with a paginated collection use list_key.
+    Without list_key, a single object response is returned unchanged.
 
     Note: on Windows with Git bash, leading slashes in API paths are rewritten
     as filesystem paths.  All callers must use paths WITHOUT a leading slash
     (e.g. 'repos/owner/repo/...' not '/repos/owner/repo/...').
     gh api accepts both forms; omitting the slash avoids the rewrite.
     """
-    cmd = ["gh", "api", "--paginate"] + list(args)
+    cmd = ["gh", "api", "--paginate", "--slurp"] + list(args)
     result = subprocess.run(
         cmd, capture_output=True, text=True, check=False,
         encoding="utf-8", errors="replace",
@@ -123,20 +127,22 @@ def _gh(*args: str) -> dict | list:
         raise RuntimeError(
             f"gh api failed ({result.returncode}): {result.stderr.strip()}"
         )
-    # gh --paginate may concatenate multiple JSON arrays; handle both forms.
-    raw = result.stdout.strip()
-    if raw.startswith("[") and raw.endswith("]["):
-        # Multiple pages of arrays: join them
-        import re as _re
-        items = _re.findall(r'\[.*?\]', raw, _re.DOTALL)
-        merged: list = []
-        for chunk in items:
-            try:
-                merged.extend(json.loads(chunk))
-            except json.JSONDecodeError:
-                pass
-        return merged
-    return json.loads(raw)
+    try:
+        pages = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("gh api returned invalid JSON") from exc
+    if not isinstance(pages, list):
+        raise RuntimeError("gh api did not return a page array")
+    if list_key is not None:
+        if not all(isinstance(page, dict) and isinstance(page.get(list_key), list)
+                   for page in pages):
+            raise RuntimeError(f"gh api returned an invalid {list_key} collection")
+        return [item for page in pages for item in page[list_key]]
+    if all(isinstance(page, list) for page in pages):
+        return [item for page in pages for item in page]
+    if len(pages) == 1 and isinstance(pages[0], dict):
+        return pages[0]
+    raise RuntimeError("gh api returned an unsupported page shape")
 
 
 def detect_repo(owner: Optional[str], repo: Optional[str]) -> tuple[str, str]:
@@ -272,10 +278,10 @@ def get_runs_for_sha(sha: str, owner: str, repo: str) -> list[dict]:
     """Return all workflow runs triggered by this commit SHA."""
     # Use URL query string instead of --field to avoid Git-bash path rewriting
     # on Windows which mangles /repos/... leading slashes.
-    data = _gh(
-        f"repos/{owner}/{repo}/actions/runs?head_sha={sha}&per_page=50"
+    runs = _gh(
+        f"repos/{owner}/{repo}/actions/runs?head_sha={sha}&per_page=50",
+        list_key="workflow_runs",
     )
-    runs = data.get("workflow_runs", []) if isinstance(data, dict) else []
     result = []
     for r in runs:
         try:
@@ -667,7 +673,13 @@ def main() -> None:
     args = parser.parse_args()
 
     # Dependency check
-    if subprocess.run(["gh", "auth", "status"], capture_output=True).returncode != 0:
+    try:
+        authenticated = subprocess.run(
+            ["gh", "auth", "status"], capture_output=True
+        ).returncode == 0
+    except FileNotFoundError:
+        authenticated = False
+    if not authenticated:
         print("ERROR: gh CLI is not installed or not authenticated.", file=sys.stderr)
         sys.exit(1)
 
@@ -699,8 +711,10 @@ def main() -> None:
         print(f"  [{i}/{len(all_commits)}] runs for {c['short']} {label}…", file=sys.stderr)
         try:
             runs_by_sha[c["sha"]] = get_runs_for_sha(c["sha"], owner, repo)
-        except RuntimeError:
-            runs_by_sha[c["sha"]] = []
+        except RuntimeError as exc:
+            print(f"ERROR: could not fetch workflow runs for {c['short']}: {exc}",
+                  file=sys.stderr)
+            sys.exit(2)
 
     session_turns = parse_session_log(args.session_log) if args.session_log else []
 
